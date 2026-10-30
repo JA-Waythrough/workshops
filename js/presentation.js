@@ -57,6 +57,28 @@
     cornerBtnHome = document.getElementById('cornerBtnHome');
   }
 
+  // --- Master Presentation Auto-Scaler (Fits 16:9 Cinema Canvas to Any Screen / Laptop Zoom) ---
+  function autoFitPresentationStage() {
+    const stage = document.querySelector('.presentation-stage');
+    if (!stage) return;
+    const padding = 20; // 10px breathing room on all sides
+    const availW = Math.max(320, window.innerWidth - padding);
+    const availH = Math.max(240, window.innerHeight - padding);
+    const baseW = 1440;
+    const baseH = 810;
+    const scale = Math.min(1, availW / baseW, availH / baseH);
+    if (scale < 0.999) {
+      stage.style.transform = `scale(${scale.toFixed(4)})`;
+    } else {
+      stage.style.transform = '';
+    }
+  }
+
+  window.addEventListener('resize', autoFitPresentationStage);
+  window.addEventListener('orientationchange', autoFitPresentationStage);
+  document.addEventListener('DOMContentLoaded', autoFitPresentationStage);
+  window.addEventListener('load', autoFitPresentationStage);
+
   // --- Stepping-Stone River Decks & Progressive Unlock State (6 Stones) ---
   const RIVER_DECKS = [
     {
@@ -5566,6 +5588,7 @@
     queryDOMElements();
     if (!viewHub) return;
     isInitialized = true;
+    autoFitPresentationStage();
 
     setupNavigationControls();
     setupIntroInteractions();
@@ -5583,6 +5606,7 @@
 
     // Export test hooks
     window.__presentation = {
+      autoFitPresentationStage,
       goToIntro,
       goToLanding,
       goToHub,

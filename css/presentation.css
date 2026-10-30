@@ -78,13 +78,18 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
   position: relative;
+  overflow: hidden;
 }
 
 .presentation-stage {
-  width: 100%;
+  width: 1440px;
   max-width: 1440px;
+  height: 810px;
+  max-height: 810px;
   aspect-ratio: 16 / 9;
   background: var(--wt-off-white);
   border-radius: var(--wt-radius-card);
@@ -93,6 +98,9 @@ select {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  transform-origin: center center;
+  will-change: transform;
 }
 
 /* Top HUD & Breadcrumb Bar (Deprecated - replaced by floating corner navigation) */
