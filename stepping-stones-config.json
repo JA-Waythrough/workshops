@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "id": "compass",
+    "title": "How do you feel about AI?",
+    "desc": "Choose your strategic governance archetype."
+  },
+  {
+    "index": 1,
+    "id": "quiz",
+    "title": "Where are we now?",
+    "desc": "How much are we already interacting with AI? Test your knowledge."
+  },
+  {
+    "index": 2,
+    "id": "playground",
+    "title": "What could we do?",
+    "desc": "Play with an interactive chatbot builder with charity presets and real-time AI testing."
+  },
+  {
+    "index": 3,
+    "id": "should",
+    "title": "What should we do?",
+    "desc": "Set your red lines across with some examples."
+  },
+  {
+    "index": 4,
+    "id": "triangle",
+    "title": "The third party",
+    "desc": "How technology alters the fundamental triangle between people accessing services, human practitioners, and automated systems."
+  },
+  {
+    "index": 5,
+    "id": "adversary",
+    "title": "Risks & The Grey Zone",
+    "desc": "Synthetic empathy, algorithmic vulnerabilities, digital attachment, deepfake scams, and machine-mediated advocacy."
+  }
+]

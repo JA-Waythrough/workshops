@@ -1,8 +1,12 @@
-# Keep unencrypted source and build/test scripts local-only
+# Keep unencrypted source, secrets, and build/test scripts local-only
+.env
+.env.*
 presentation-source.html
 encrypt.py
 test-runner.js
 verification-report.json
 image-prompts.json
 screenshots/
+.chrome-data-presentation/
+__pycache__/
 .DS_Store

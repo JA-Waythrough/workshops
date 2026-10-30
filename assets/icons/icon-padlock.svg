@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 450" width="100%" height="100%">
+  <defs>
+    <!-- Negative space buffer channel separating charcoal padlock from organic mint pebble -->
+    <mask id="wtPadlockBufferMask">
+      <rect x="0" y="0" width="500" height="450" fill="#ffffff" />
+      <path d="M 168,210 L 168,150 A 57,57 0 0 1 282,150 L 282,210" fill="none" stroke="#000000" stroke-width="70" stroke-linecap="round" />
+      <rect x="117" y="177" width="216" height="198" rx="48" fill="#000000" />
+    </mask>
+    <!-- Rounded keyhole negative space cutout -->
+    <mask id="wtPadlockKeyholeMask">
+      <rect x="0" y="0" width="500" height="450" fill="#ffffff" />
+      <circle cx="225" cy="260" r="21" fill="#000000" />
+      <rect x="213" y="264" width="24" height="48" rx="12" fill="#000000" />
+    </mask>
+  </defs>
+
+  <!-- Asymmetric Organic Waythrough Pebble Aura (Soft Jade #77c19c) -->
+  <path
+    d="M 288,56 C 396,40 466,118 460,224 C 454,328 366,398 262,388 C 166,378 148,296 166,206 C 182,126 194,70 288,56 Z"
+    fill="#77c19c"
+    mask="url(#wtPadlockBufferMask)"
+  />
+
+  <!-- Stylized Bold Rounded Padlock Silhouette (Dark Charcoal #1d1d1b) -->
+  <g mask="url(#wtPadlockKeyholeMask)">
+    <path
+      d="M 168,210 L 168,150 A 57,57 0 0 1 282,150 L 282,210"
+      fill="none"
+      stroke="#1d1d1b"
+      stroke-width="34"
+      stroke-linecap="round"
+    />
+    <rect x="135" y="195" width="180" height="162" rx="32" fill="#1d1d1b" />
+  </g>
+</svg>
