@@ -94,7 +94,7 @@
       index: 1,
       id: 'quiz',
       title: 'Where are we now?',
-      desc: 'How much are we already interacting with AI? Test your knowledge.',
+      desc: "Before we consider the role of AI in Waythrough's future, do we know how we are interacting with AI already?",
       spoke: 1,
       slide: 0,
       x: 461,
@@ -240,6 +240,13 @@
     journey.viewedDecks.clear();
     journey.justUnlockedDeck = null;
     journey.lastActiveDeck = 0;
+    try {
+      localStorage.removeItem("waythrough_priority_rankings");
+      localStorage.removeItem("waythrough_compass_data");
+    } catch (_) {}
+    if (typeof window.__resetPriorityItems === 'function') {
+      window.__resetPriorityItems();
+    }
     updatePreReadCompletedState(false);
     renderRiverPebbleStates();
   }
@@ -2700,143 +2707,215 @@
       }
     }
 
+    let priorityItems = [];
+
+    function initPriorityItems() {
+      if (priorityItems.length === 0) {
+        let saved = null;
+        try {
+          const raw = localStorage.getItem("waythrough_priority_rankings");
+          if (raw) saved = JSON.parse(raw);
+        } catch (_) {}
+
+        if (Array.isArray(saved) && saved.length === quizQuestions.length) {
+          priorityItems = saved.map(s => {
+            const originalQ = quizQuestions.find(q => q.q === s.question) || quizQuestions[s.id - 1] || quizQuestions[0];
+            const originalIdx = quizQuestions.indexOf(originalQ);
+            return {
+              id: s.id,
+              q: s.question,
+              userGuess: (originalIdx !== -1 && userAnswers[originalIdx]) ? userAnswers[originalIdx] : (s.userGuess || "Not answered")
+            };
+          });
+        } else {
+          priorityItems = quizQuestions.map((item, i) => ({
+            id: i + 1,
+            q: item.q,
+            userGuess: userAnswers[i] || "Not answered"
+          }));
+        }
+      } else {
+        priorityItems.forEach(item => {
+          const originalIdx = quizQuestions.findIndex(q => q.q === item.q);
+          if (originalIdx !== -1 && userAnswers[originalIdx]) {
+            item.userGuess = userAnswers[originalIdx];
+          }
+        });
+      }
+    }
+
+    function updatePriorityData() {
+      const tiers = [
+        { maxRank: 2, label: "Urgent" },
+        { maxRank: 4, label: "Find out as soon as we can" },
+        { maxRank: 5, label: "Look into over the next year" },
+        { maxRank: 7, label: "Nice to know" },
+        { maxRank: 8, label: "Don't care" }
+      ];
+
+      const priorityData = priorityItems.map((item, idx) => {
+        const rank = idx + 1;
+        const tierObj = tiers.find(t => rank <= t.maxRank) || tiers[tiers.length - 1];
+        return {
+          id: item.id,
+          question: item.q,
+          userGuess: item.userGuess,
+          rank,
+          priorityTier: tierObj.label
+        };
+      });
+
+      state.userPriorityData = priorityData;
+      try {
+        localStorage.setItem("waythrough_priority_rankings", JSON.stringify(priorityData));
+      } catch (_) {}
+    }
+
+    let draggedIndex = null;
+
+    function attachCardDragListeners(card, index) {
+      card.addEventListener("dragstart", (e) => {
+        killPriorityDemo();
+        hasInteractedWithPriority = true;
+        draggedIndex = index;
+        card.classList.add("is-dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", index.toString());
+      });
+
+      card.addEventListener("dragend", () => {
+        card.classList.remove("is-dragging");
+        document.querySelectorAll("#priorityCardsList .priority-card").forEach(c => {
+          c.classList.remove("drag-over-top", "drag-over-bottom", "is-dragging");
+        });
+        draggedIndex = null;
+      });
+
+      card.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (draggedIndex === null || draggedIndex === index) return;
+        const rect = card.getBoundingClientRect();
+        const relY = e.clientY - rect.top;
+        if (relY < rect.height / 2) {
+          card.classList.add("drag-over-top");
+          card.classList.remove("drag-over-bottom");
+        } else {
+          card.classList.add("drag-over-bottom");
+          card.classList.remove("drag-over-top");
+        }
+      });
+
+      card.addEventListener("dragleave", () => {
+        card.classList.remove("drag-over-top", "drag-over-bottom");
+      });
+
+      card.addEventListener("drop", (e) => {
+        e.preventDefault();
+        card.classList.remove("drag-over-top", "drag-over-bottom");
+        if (draggedIndex === null || draggedIndex === index) return;
+
+        const rect = card.getBoundingClientRect();
+        const relY = e.clientY - rect.top;
+        let targetIndex = index;
+        if (relY >= rect.height / 2 && draggedIndex < index) {
+          targetIndex = index;
+        } else if (relY < rect.height / 2 && draggedIndex > index) {
+          targetIndex = index;
+        }
+
+        const [moved] = priorityItems.splice(draggedIndex, 1);
+        priorityItems.splice(targetIndex, 0, moved);
+        renderPriorityCards();
+      });
+    }
+
+    function reorderPriorityItem(fromIdx, toIdx) {
+      if (fromIdx < 0 || fromIdx >= priorityItems.length || toIdx < 0 || toIdx >= priorityItems.length) return;
+      const [moved] = priorityItems.splice(fromIdx, 1);
+      priorityItems.splice(toIdx, 0, moved);
+      renderPriorityCards();
+    }
+
+    function renderPriorityCards() {
+      const listEl = document.getElementById("priorityCardsList");
+      if (!listEl) return;
+      listEl.innerHTML = "";
+
+      priorityItems.forEach((item, index) => {
+        const rank = index + 1;
+        const card = document.createElement("div");
+        card.className = "priority-card";
+        card.setAttribute("draggable", "true");
+        card.setAttribute("data-id", item.id.toString());
+        card.setAttribute("data-index", index.toString());
+        card.setAttribute("role", "listitem");
+        card.setAttribute("aria-label", `Rank ${rank}: ${item.q}`);
+
+        let rankClass = "";
+        if (rank <= 2) rankClass = "rank-urgent";
+        else if (rank <= 4) rankClass = "rank-asap";
+
+        card.innerHTML = `
+          <span class="priority-drag-handle" title="Drag to reorder" aria-hidden="true">⠿</span>
+          <span class="priority-rank-badge ${rankClass}">#${rank}</span>
+          <span class="priority-card-title">${item.q}</span>
+          <span class="priority-guess-chip">Guess: ${item.userGuess}</span>
+        `;
+
+        attachCardDragListeners(card, index);
+        listEl.appendChild(card);
+      });
+
+      updatePriorityData();
+    }
+
+    function resetPriorityItems() {
+      priorityItems = quizQuestions.map((item, i) => ({
+        id: i + 1,
+        q: item.q,
+        userGuess: userAnswers[i] || "Not answered"
+      }));
+      renderPriorityCards();
+    }
+
     function showResults() {
       killQuizDemo();
       if (questionBox) questionBox.style.display = "none";
+      const pWrap = quizShell.querySelector(".quiz-progress-bar-wrap");
+      if (pWrap) pWrap.style.display = "none";
+
       if (resultsContainer) {
         resultsContainer.style.display = "block";
         resultsContainer.classList.add("active");
       }
 
-      if (resultsTableBody) {
-        let rowsHtml = "";
-        quizQuestions.forEach((item, i) => {
-          const userGuess = userAnswers[i] || "Not answered";
-          rowsHtml += "<tr>" +
-            "<td><strong>" + item.q + "</strong></td>" +
-            "<td class=\"quiz-user-choice\">" + userGuess + "</td>" +
-            "<td class=\"quiz-answer-cell\" id=\"quizAnswerCell-" + i + "\"></td>" +
-          "</tr>";
-        });
-        resultsTableBody.innerHTML = rowsHtml;
+      initPriorityItems();
+      renderPriorityCards();
+      markDeckViewed(1);
+
+      const btnConfirm = document.getElementById("btnConfirmPriorities");
+      if (btnConfirm) {
+        btnConfirm.onclick = () => {
+          killPriorityDemo();
+          updatePriorityData();
+          markDeckViewed(1);
+          goToHub();
+        };
       }
 
-      const btnReveal = document.getElementById("btnRevealShrugs");
-      if (btnReveal) {
-        btnReveal.classList.remove("hidden");
-        btnReveal.removeAttribute("disabled");
-        btnReveal.onclick = () => revealAnswers();
-      }
+      setTimeout(() => {
+        demonstratePriorityRanking();
+      }, 750);
     }
 
-    let isRevealing = false;
     function revealAnswers() {
-      killQuizDemo();
-      if (isRevealing) return;
-      isRevealing = true;
-      const btnReveal = document.getElementById("btnRevealShrugs");
-      if (btnReveal) {
-        btnReveal.classList.add("hidden");
-        btnReveal.setAttribute("disabled", "true");
-      }
-
-      // 1.0s sequential reveal (8 rows, 125ms per row)
-      quizQuestions.forEach((_, idx) => {
-        setTimeout(() => {
-          const cell = document.getElementById("quizAnswerCell-" + idx);
-          if (cell) {
-            cell.innerHTML = '<span class="quiz-official-shrug pop-in">🤷 <span class="quiz-shrug-tag">Unknown</span></span>';
-          }
-        }, idx * 125);
-      });
-
-      // At 1000ms: trigger horizontal wipe torrent of large shrug emojis
-      setTimeout(() => {
-        triggerShrugHorizontalWipe();
-      }, 1000);
+      showResults();
     }
 
     function triggerShrugHorizontalWipe() {
-      const stage = document.getElementById("shrugTorrentStage");
-      if (!stage) {
-        markDeckViewed(1);
-        goToHub();
-        return;
-      }
-      stage.innerHTML = "";
-      stage.classList.add("active");
-
-      // 3x Density Tide: 18 overlapping vertical rows x 24 columns = 432 emojis (Zero gaps)
-      const rows = 18;
-      const colsPerRow = 24;
-      const emojiVariants = ["🤷", "🤷‍♂️", "🤷‍♀️", "🤷"];
-      const emojis = [];
-
-      for (let r = 0; r < rows; r++) {
-        // Full vertical bleed with overlap from -6vh to 102vh
-        const rowTop = -6 + (r / (rows - 1)) * 108 + (Math.random() * 2 - 1);
-        for (let c = 0; c < colsPerRow; c++) {
-          const el = document.createElement("div");
-          el.className = "torrent-shrug-emoji";
-          el.textContent = emojiVariants[(r * 3 + c) % emojiVariants.length];
-
-          // Densely packed horizontal columns across -145vw to -5vw
-          const colOffsetVw = -145 + (c / colsPerRow) * 140 + (Math.random() * 3 - 1.5);
-          const rot = (Math.random() - 0.5) * 44;
-          const scale = 1.05 + Math.random() * 0.45;
-
-          el.style.top = `${rowTop.toFixed(2)}vh`;
-          el.style.left = `0px`;
-          el.style.transform = `translate3d(${colOffsetVw.toFixed(2)}vw, 0, 0) rotate(${rot.toFixed(1)}deg) scale(${scale.toFixed(2)})`;
-
-          stage.appendChild(el);
-          emojis.push({
-            el,
-            baseOffsetVw: colOffsetVw,
-            rot,
-            scale,
-            row: r,
-            wobbleSpeed: 2.2 + Math.random() * 2.2,
-            wobbleAmp: 5 + Math.random() * 8
-          });
-        }
-      }
-
-      const startTime = performance.now();
-      const durationMs = 2500; // 2.5s total sweep
-      let switchedPage = false;
-
-      function wipeFrame(now) {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / durationMs);
-
-        // Wave travels a total of 265vw: from start to completely past right edge
-        const waveTravelVw = progress * 265;
-
-        for (let i = 0; i < emojis.length; i++) {
-          const item = emojis[i];
-          const curVw = item.baseOffsetVw + waveTravelVw;
-          const bob = Math.sin(progress * Math.PI * item.wobbleSpeed + item.row) * item.wobbleAmp;
-          item.el.style.transform = `translate3d(${curVw.toFixed(2)}vw, ${bob.toFixed(1)}px, 0) rotate(${item.rot.toFixed(1)}deg) scale(${item.scale.toFixed(2)})`;
-        }
-
-        // When completely full (around 48% progress, the torrent covers entire screen):
-        // Switch pages behind to the stepping stones river hub
-        if (progress >= 0.48 && !switchedPage) {
-          switchedPage = true;
-          markDeckViewed(1);
-          goToHub();
-        }
-
-        if (progress < 1) {
-          requestAnimationFrame(wipeFrame);
-        } else {
-          stage.classList.remove("active");
-          stage.innerHTML = "";
-          isRevealing = false;
-        }
-      }
-      requestAnimationFrame(wipeFrame);
+      markDeckViewed(1);
+      goToHub();
     }
 
     if (btnNext) {
@@ -2861,8 +2940,11 @@
     window.__quizRenderQuestion = renderQuestion;
     window.__quizShowResults = showResults;
     window.__quizRevealAnswers = revealAnswers;
+    window.__reorderPriorityItem = reorderPriorityItem;
+    window.__resetPriorityItems = resetPriorityItems;
+    window.__getPriorityItems = () => priorityItems;
     window.__triggerShrugHorizontalWipe = triggerShrugHorizontalWipe;
-    window.__triggerAutumnShrugTumble = triggerShrugHorizontalWipe; // backward compatibility
+    window.__triggerAutumnShrugTumble = triggerShrugHorizontalWipe;
   }
 
   // --- Section: Playground of Possibilities Engine (Job 5) ---
@@ -3533,6 +3615,97 @@
     });
   }
 
+  // 1B. Stone 2 ("Where are we now?" — Priority Ranking) Demo
+  let priorityDemoTl = null;
+  let hasInteractedWithPriority = false;
+  let priorityDemoCleanupListeners = null;
+
+  function killPriorityDemo() {
+    if (priorityDemoTl) {
+      priorityDemoTl.kill();
+      priorityDemoTl = null;
+    }
+    if (priorityDemoCleanupListeners) {
+      priorityDemoCleanupListeners();
+      priorityDemoCleanupListeners = null;
+    }
+    document.querySelectorAll('#priorityCardsList .priority-card').forEach(b => {
+      b.classList.remove('demo-highlight', 'is-dragging');
+      if (typeof gsap !== 'undefined') gsap.set(b, { y: 0, scale: 1 });
+    });
+    const cursor = document.getElementById('priorityDemoCursor');
+    if (cursor) cursor.remove();
+  }
+
+  function demonstratePriorityRanking() {
+    killPriorityDemo();
+    if (hasInteractedWithPriority) return;
+    if (typeof gsap === 'undefined') return;
+
+    const stage = document.getElementById('priorityRankingStage');
+    const cards = Array.from(document.querySelectorAll('#priorityCardsList .priority-card'));
+    if (!stage || cards.length < 4) return;
+
+    const onUserInteraction = () => {
+      hasInteractedWithPriority = true;
+      killPriorityDemo();
+    };
+    const evts = ['pointerdown', 'click', 'keydown', 'dragstart'];
+    evts.forEach(ev => stage.addEventListener(ev, onUserInteraction, { capture: true }));
+    priorityDemoCleanupListeners = () => {
+      evts.forEach(ev => stage.removeEventListener(ev, onUserInteraction, { capture: true }));
+    };
+
+    const { cursor, cursorText } = mountDemoCursor(stage, 'priorityDemoCursor', 'priorityDemoCursorText', 'Drag to rank priority, top to bottom');
+    const targetCard = cards[3]; // Card 4 ("prohibited by policy")
+    const pStart = getDemoRelativePoint(stage, targetCard, 20, 10);
+    gsap.set(cursor, { x: pStart.x, y: pStart.y, opacity: 0 });
+
+    priorityDemoTl = gsap.timeline({
+      delay: 0.75,
+      onComplete: () => killPriorityDemo()
+    });
+
+    priorityDemoTl.to(cursor, {
+      opacity: 1,
+      duration: 0.55,
+      ease: 'sine.out',
+      onStart: () => targetCard.classList.add('demo-highlight')
+    });
+    priorityDemoTl.to({}, { duration: 1.2 });
+
+    const topCard = cards[0];
+    priorityDemoTl.to(cursor, {
+      x: () => getDemoRelativePoint(stage, topCard, 20, -10).x,
+      y: () => getDemoRelativePoint(stage, topCard, 20, -10).y,
+      duration: 1.35,
+      ease: 'power2.inOut',
+      onStart: () => {
+        if (cursorText) cursorText.textContent = 'Drag critical questions to Urgent';
+        targetCard.classList.add('is-dragging');
+        gsap.to(targetCard, { y: -80, scale: 1.02, duration: 1.35, ease: 'power2.inOut' });
+      },
+      onComplete: () => {
+        gsap.to(targetCard, {
+          y: 0,
+          scale: 1,
+          duration: 0.35,
+          ease: 'sine.out',
+          onComplete: () => {
+            targetCard.classList.remove('is-dragging', 'demo-highlight');
+          }
+        });
+      }
+    });
+    priorityDemoTl.to({}, { duration: 1.7 });
+
+    priorityDemoTl.to(cursor, {
+      opacity: 0,
+      duration: 0.5,
+      ease: 'sine.in'
+    });
+  }
+
   // 2. Stone 3 ("What could we do?" — Chatbot Playground) Thorough Two-Stage Tutorial Demo
   let playgroundDemoTl = null;
   let hasInteractedWithPlayground = false;
@@ -4194,6 +4367,7 @@
 
   function killAllChapterDemos() {
     killQuizDemo();
+    killPriorityDemo();
     killPlaygroundDemo(true);
     killSpectrumDemo(true);
     killTriangleDemo(true);
@@ -4202,7 +4376,12 @@
 
   function launchChapterDemo(spokeNum, slideIdx) {
     if (spokeNum === 1 && slideIdx === 0) {
-      demonstrateQuizWidget();
+      const resultsContainer = document.getElementById("quizResultsContainer");
+      if (resultsContainer && resultsContainer.classList.contains("active")) {
+        demonstratePriorityRanking();
+      } else {
+        demonstrateQuizWidget();
+      }
     } else if (spokeNum === 1 && slideIdx === 1) {
       demonstratePlaygroundWidget();
     } else if (spokeNum === 1 && slideIdx === 2) {
@@ -4415,6 +4594,18 @@
         );
       }
       if (bodyEl) bodyEl.textContent = matchedArchetype.body;
+
+      state.userCompassData = {
+        title: matchedArchetype.title,
+        badge: matchedArchetype.badge,
+        icon: matchedArchetype.icon || 'compass',
+        body: matchedArchetype.body,
+        perspectiveScores: { ...scores },
+        timestamp: new Date().toISOString()
+      };
+      try {
+        localStorage.setItem('waythrough_compass_data', JSON.stringify(state.userCompassData));
+      } catch (_) {}
 
       if (indicatorEl) {
         if (matchedArchetype === combinedArchetypes['ALL_LOW']) {
@@ -5631,6 +5822,14 @@
       introResetPosition: window.__introResetPosition,
       demonstrateQuizWidget,
       killQuizDemo,
+      demonstratePriorityRanking,
+      killPriorityDemo,
+      reorderPriorityItem: (from, to) => { if (typeof window.__reorderPriorityItem === 'function') window.__reorderPriorityItem(from, to); },
+      getPriorityItems: () => { if (typeof window.__getPriorityItems === 'function') return window.__getPriorityItems(); return []; },
+      getUserScores: () => ({
+        compass: state.userCompassData || null,
+        priorities: state.userPriorityData || null
+      }),
       demonstratePlaygroundWidget,
       killPlaygroundDemo,
       demonstrateSpectrumWidget,
