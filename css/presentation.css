@@ -1587,6 +1587,10 @@ input[type=range].spectrum-slider:active {
 }
 
 /* Central ME Node with Dynamic Persona Icon */
+.view-landing.birds-eye-animating * {
+  transition: none !important;
+}
+
 .node-center-me {
   position: absolute;
   left: 50%;
@@ -1605,7 +1609,7 @@ input[type=range].spectrum-slider:active {
   gap: 1px;
   z-index: 10;
   pointer-events: none;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.25s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .me-icon-wrap {
@@ -1648,7 +1652,7 @@ input[type=range].spectrum-slider:active {
   user-select: none;
   z-index: 15;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s, opacity 0.25s ease;
+  transition: box-shadow 0.15s, border-color 0.15s, opacity 0.25s ease;
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
@@ -1697,11 +1701,12 @@ input[type=range].spectrum-slider:active {
 .node-pill-indicator.node-amber { background: #d49b00; }
 .node-pill-indicator.node-slate { background: #666666; }
 
-/* Bottom Row: Static-Height Governance Archetype Card (Consistent Corner Navigation) */
+/* Bottom Row: Static-Height Governance Archetype Card, Photo Pebble & Go to River Button */
 .landing-bottom-row {
   display: flex;
   align-items: stretch;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 0.85rem;
   width: 100%;
   max-width: 860px;
   height: 118px;
@@ -1711,8 +1716,21 @@ input[type=range].spectrum-slider:active {
   margin: 0.2rem auto 0;
 }
 
+.landing-photo-pebble {
+  width: 118px;
+  height: 118px;
+  min-width: 118px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  background: var(--wt-dark-surface);
+  position: relative;
+  overflow: hidden;
+}
+
 .perspective-desc-card {
   flex: 1;
+  min-width: 0;
   height: 100%;
   min-height: 118px;
   max-height: 118px;
@@ -1728,6 +1746,54 @@ input[type=range].spectrum-slider:active {
   flex-direction: column;
   justify-content: center;
   overflow: hidden;
+}
+
+.btn-landing-river {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 130px;
+  min-width: 130px;
+  height: 118px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #d8f3e6 0%, #b1e7cc 100%);
+  color: var(--wt-green-dark);
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease, background 0.2s ease;
+  user-select: none;
+}
+
+.btn-landing-river .btn-label {
+  line-height: 1.15;
+  text-align: center;
+}
+
+.btn-landing-river .btn-arrow {
+  font-size: 1.2rem;
+  transition: transform 0.22s ease;
+}
+
+.btn-landing-river:hover {
+  background: linear-gradient(135deg, #e5f8ee 0%, #c4edd8 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+.btn-landing-river:hover .btn-arrow {
+  transform: translateX(4px);
+}
+
+.btn-landing-river:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .desc-card-header {
@@ -2542,6 +2608,20 @@ input[type=range].spectrum-slider:active {
   transform: translateY(-1px);
 }
 
+.btn-quiz-next.is-reveal.ready {
+  background: linear-gradient(135deg, #6959c5 0%, #4a3ca8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(105, 89, 197, 0.45);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn-quiz-next.is-reveal.ready:hover {
+  background: linear-gradient(135deg, #7b6cd9 0%, #5748be 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 22px rgba(105, 89, 197, 0.6);
+}
+
 /* ==========================================================================
    Section: Priority Ranking Screen ("Where are we now?" Reveal)
    ========================================================================== */
@@ -2612,25 +2692,26 @@ input[type=range].spectrum-slider:active {
   min-height: 388px;
 }
 
-/* Vertical Priority Axis */
+/* Vertical Priority Axis (Highest down to Lowest Priority) */
 .priority-vertical-axis {
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 0.4rem 0.8rem 0.4rem 0.6rem;
+  padding: 0.8rem 1.1rem 0.8rem 0.6rem;
   border-right: 2px dashed rgba(18, 83, 50, 0.2);
   user-select: none;
+  min-width: 155px;
 }
 
 .priority-axis-track {
   position: absolute;
-  top: 14px;
-  bottom: 14px;
+  top: 24px;
+  bottom: 24px;
   left: 13px;
-  width: 2px;
-  background: linear-gradient(to bottom, #cf2838 0%, #d47a00 25%, var(--wt-green-sage) 50%, #6a7c73 75%, #aaaaaa 100%);
-  border-radius: 1px;
+  width: 2.5px;
+  background: linear-gradient(to bottom, var(--wt-green-dark) 0%, var(--wt-green-sage) 50%, #999999 100%);
+  border-radius: 2px;
   z-index: 1;
 }
 
@@ -2655,59 +2736,30 @@ input[type=range].spectrum-slider:active {
 
 .priority-axis-step .axis-label {
   font-family: 'Poppins', sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   line-height: 1.25;
 }
 
-.priority-axis-step.step-urgent .axis-node {
-  border-color: #cf2838;
-  background: #ffcdca;
-  box-shadow: 0 0 0 3px rgba(207, 40, 56, 0.22);
+.priority-axis-step.step-highest .axis-node {
+  border-color: var(--wt-green-dark);
+  background: var(--wt-green-mint);
+  box-shadow: 0 0 0 3.5px rgba(18, 83, 50, 0.25);
 }
-.priority-axis-step.step-urgent .axis-label {
-  color: #ad1424;
+.priority-axis-step.step-highest .axis-label {
+  color: var(--wt-green-dark);
   font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-.priority-axis-step.step-asap .axis-node {
-  border-color: #d47a00;
-  background: #ffebd2;
-  box-shadow: 0 0 0 3px rgba(212, 122, 0, 0.18);
+.priority-axis-step.step-lowest .axis-node {
+  border-color: #777777;
+  background: #eeeeee;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
-.priority-axis-step.step-asap .axis-label {
-  color: #9e5b00;
+.priority-axis-step.step-lowest .axis-label {
+  color: #666666;
   font-weight: 600;
-}
-
-.priority-axis-step.step-year .axis-node {
-  border-color: var(--wt-green-sage);
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(66, 125, 95, 0.18);
-}
-.priority-axis-step.step-year .axis-label {
-  color: var(--wt-charcoal);
-  font-weight: 600;
-}
-
-.priority-axis-step.step-nice .axis-node {
-  border-color: #55665d;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(85, 102, 93, 0.15);
-}
-.priority-axis-step.step-nice .axis-label {
-  color: #55665d;
-  font-weight: 500;
-}
-
-.priority-axis-step.step-dontcare .axis-node {
-  border-color: #999999;
-  background: #efefef;
-  box-shadow: 0 0 0 3px rgba(153, 153, 153, 0.15);
-}
-.priority-axis-step.step-dontcare .axis-label {
-  color: #777777;
-  font-weight: 500;
-  font-style: italic;
+  letter-spacing: 0.01em;
 }
 
 /* Draggable Cards Column */
@@ -2914,6 +2966,125 @@ input[type=range].spectrum-slider:active {
   display: flex;
   flex-direction: column;
   border-radius: 14px;
+  transition: filter 0.5s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.5s ease;
+}
+
+.playground-col-panel.is-intro-blurred {
+  filter: blur(8.5px) saturate(0.85);
+  opacity: 0.32;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Extra Intro Overlays for Step 1 (Build a chatbot) and Step 2 (Chat with it) */
+.playground-intro-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 22;
+  cursor: pointer;
+  border-radius: 14px;
+  transition: opacity 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0.4s ease;
+  pointer-events: auto;
+}
+
+.playground-intro-overlay--configure {
+  left: 0;
+  width: calc(50% - 0.58rem);
+}
+
+.playground-intro-overlay--interact {
+  right: 0;
+  width: calc(50% - 0.58rem);
+}
+
+.playground-intro-overlay.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.96);
+}
+
+.pg-intro-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem 1.8rem;
+  background: rgba(255, 255, 255, 0.93);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(18, 83, 50, 0.22);
+  border-radius: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(18, 83, 50, 0.08);
+  max-width: 320px;
+  width: 82%;
+  user-select: none;
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.playground-intro-overlay:hover .pg-intro-card,
+.playground-intro-overlay:focus-visible .pg-intro-card {
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--wt-green-dark);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(18, 83, 50, 0.15);
+}
+
+.pg-intro-step-pill {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  background: var(--wt-green-mint);
+  color: var(--wt-green-dark);
+  border: 1px solid rgba(18, 83, 50, 0.2);
+  margin-bottom: 0.65rem;
+}
+
+.pg-intro-step-pill--interact {
+  background: var(--wt-green-dark);
+  color: #ffffff;
+  border-color: var(--wt-green-dark);
+}
+
+.pg-intro-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--wt-green-dark);
+  line-height: 1.22;
+  margin: 0;
+}
+
+.playground-intro-overlay--interact .pg-intro-title {
+  color: var(--wt-charcoal);
+}
+
+.pg-intro-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--wt-green-sage);
+  margin-top: 0.65rem;
+  letter-spacing: 0.01em;
+}
+
+.pg-intro-cta .cta-arrow {
+  font-size: 0.95rem;
+  transition: transform 0.2s ease;
+}
+
+.playground-intro-overlay:hover .pg-intro-cta .cta-arrow {
+  transform: translateX(4px);
 }
 
 .playground-col-panel--configure {

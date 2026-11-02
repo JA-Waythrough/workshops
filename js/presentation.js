@@ -134,7 +134,7 @@
       index: 5,
       id: 'adversary',
       title: 'Risks & The Grey Zone',
-      desc: 'Synthetic empathy, algorithmic vulnerabilities, digital attachment, deepfake scams, and machine-mediated advocacy.',
+      desc: 'What training do our colleagues need? Finish with this example activity, navigating AI grey areas.',
       spoke: 3,
       slide: 1,
       x: 1168,
@@ -310,7 +310,9 @@
   function updateHUD() {
     updateCompanionVisibility();
     if (cornerNav) {
-      if (state.view === 'intro' || state.view === 'hub') {
+      const resultsContainer = document.getElementById("quizResultsContainer");
+      const isQuizReveal = state.view === 'spoke' && state.spoke === 1 && state.slide === 0 && resultsContainer && resultsContainer.classList.contains("active");
+      if (state.view === 'intro' || state.view === 'hub' || state.view === 'landing' || isQuizReveal) {
         cornerNav.style.display = 'none';
       } else {
         cornerNav.style.display = 'flex';
@@ -617,6 +619,222 @@
     updateHUD();
   }
 
+  let landingBirdsEyeTl = null;
+
+  function killLandingBirdsEyeEntrance() {
+    if (landingBirdsEyeTl) {
+      landingBirdsEyeTl.kill();
+      landingBirdsEyeTl = null;
+    }
+    if (viewLanding) {
+      viewLanding.classList.remove('birds-eye-animating');
+      const allAnimated = viewLanding.querySelectorAll(
+        '.landing-title, #nodeSpokeCanvas, .node-center-me, .perspective-node, #landingPhotoPebble, #perspectiveDescCard, #btnLandingEnter'
+      );
+      if (typeof gsap !== 'undefined' && allAnimated.length > 0) {
+        gsap.set(allAnimated, { clearProps: 'transform,opacity,filter' });
+      }
+    }
+  }
+
+  function animateLandingBirdsEyeEntrance() {
+    killLandingBirdsEyeEntrance();
+    if (typeof gsap === 'undefined' || !viewLanding) return;
+
+    viewLanding.classList.add('birds-eye-animating');
+
+    const title = viewLanding.querySelector('.landing-title');
+    const spokeCanvas = viewLanding.querySelector('#nodeSpokeCanvas');
+    const meNode = viewLanding.querySelector('.node-center-me');
+    const nodeOrder = ['node-pragmatist', 'node-anchor', 'node-skeptic', 'node-overwhelmed', 'node-ignore', 'node-explorer'];
+    const nodes = nodeOrder.map(id => document.getElementById(id)).filter(Boolean);
+    const photoPebble = viewLanding.querySelector('#landingPhotoPebble');
+    const descCard = viewLanding.querySelector('#perspectiveDescCard');
+    const btnEnter = viewLanding.querySelector('#btnLandingEnter');
+
+    landingBirdsEyeTl = gsap.timeline({
+      onComplete: () => {
+        killLandingBirdsEyeEntrance();
+        if (!hasUserInteracted && typeof window.__playOnboardingAnimation === 'function') {
+          window.__playOnboardingAnimation();
+        }
+      }
+    });
+
+    // 1. Header falls from high bird's-eye view onto the page (0.00s)
+    if (title) {
+      landingBirdsEyeTl.fromTo(title,
+        { scale: 2.4, y: -65, opacity: 0 },
+        { scale: 1, y: 0, opacity: 1, duration: 0.52, ease: 'back.out(1.25)' },
+        0
+      );
+    }
+
+    // 2. SVG spoke tracks fade in and radiate outward from center (0.15s)
+    if (spokeCanvas) {
+      landingBirdsEyeTl.fromTo(spokeCanvas,
+        { scale: 0.5, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.45, ease: 'power2.out' },
+        0.15
+      );
+    }
+
+    // 3. Central ME node drops down into center stage with heavy tactile thud (0.25s)
+    if (meNode) {
+      landingBirdsEyeTl.fromTo(meNode,
+        { scale: 3.2, y: -90, xPercent: -50, yPercent: -50, opacity: 0 },
+        { scale: 1, y: 0, xPercent: -50, yPercent: -50, opacity: 1, duration: 0.58, ease: 'back.out(1.8)' },
+        0.25
+      );
+    }
+
+    // 4. Draggable perspective nodes fall onto page in clockwise cascade (0.45s to 1.30s)
+    if (nodes.length > 0) {
+      landingBirdsEyeTl.fromTo(nodes,
+        { scale: 2.5, y: -70, xPercent: -50, yPercent: -50, opacity: 0 },
+        { scale: 1, y: 0, xPercent: -50, yPercent: -50, opacity: 1, duration: 0.46, stagger: 0.15, ease: 'back.out(1.4)' },
+        0.45
+      );
+    }
+
+    // 5. Landing Photo Pebble falls down onto the page (1.35s)
+    if (photoPebble) {
+      landingBirdsEyeTl.fromTo(photoPebble,
+        { scale: 2.2, y: -50, opacity: 0 },
+        { scale: 1, y: 0, opacity: 1, duration: 0.45, ease: 'back.out(1.3)' },
+        1.35
+      );
+    }
+
+    // 6. Perspective Archetype Description Card drops down (1.50s)
+    if (descCard) {
+      landingBirdsEyeTl.fromTo(descCard,
+        { scale: 1.4, y: -40, opacity: 0 },
+        { scale: 1, y: 0, opacity: 1, duration: 0.45, ease: 'back.out(1.2)' },
+        1.50
+      );
+    }
+
+    // 7. "Continue" button drops down with confident landing (1.65s -> lands by ~2.10s)
+    if (btnEnter) {
+      landingBirdsEyeTl.fromTo(btnEnter,
+        { scale: 2.0, y: -50, opacity: 0 },
+        { scale: 1, y: 0, opacity: 1, duration: 0.45, ease: 'back.out(1.5)' },
+        1.65
+      );
+    }
+  }
+
+  let isExitingLanding = false;
+
+  function animateMeBounceAndExit(callback) {
+    if (isExitingLanding) return;
+    isExitingLanding = true;
+
+    const meNode = document.getElementById('nodeCenterMe');
+    const btnEnter = document.getElementById('btnLandingEnter');
+    if (btnEnter) {
+      btnEnter.style.pointerEvents = 'none';
+      btnEnter.style.opacity = '0.7';
+    }
+
+    if (typeof gsap === 'undefined' || !meNode) {
+      if (typeof callback === 'function') callback();
+      isExitingLanding = false;
+      return;
+    }
+
+    killLandingBirdsEyeEntrance();
+    if (typeof window.__killOnboardingAnimation === 'function') {
+      window.__killOnboardingAnimation();
+    }
+
+    meNode.style.zIndex = '999';
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (typeof callback === 'function') callback();
+        setTimeout(() => {
+          gsap.set(meNode, { clearProps: 'all' });
+          if (btnEnter) {
+            btnEnter.style.pointerEvents = 'auto';
+            btnEnter.style.opacity = '1';
+          }
+          isExitingLanding = false;
+        }, 400);
+      }
+    });
+
+    // 1. Anticipation squash & spring upward slightly
+    tl.to(meNode, {
+      y: -24,
+      scaleX: 1.15,
+      scaleY: 0.88,
+      xPercent: -50,
+      yPercent: -50,
+      duration: 0.14,
+      ease: 'power2.out'
+    });
+
+    // 2. Downward gravity plunge towards bottom of screen (heading right)
+    tl.to(meNode, {
+      x: 150,
+      y: 220,
+      scaleX: 0.85,
+      scaleY: 1.22,
+      rotation: 16,
+      xPercent: -50,
+      yPercent: -50,
+      duration: 0.24,
+      ease: 'power2.in'
+    });
+
+    // 3. Ground impact compression bounce
+    tl.to(meNode, {
+      scaleX: 1.32,
+      scaleY: 0.70,
+      xPercent: -50,
+      yPercent: -50,
+      duration: 0.06,
+      ease: 'power1.out'
+    });
+
+    // 4. Joyful rebound leap arc up and to the right
+    tl.to(meNode, {
+      x: 320,
+      y: 110,
+      scaleX: 1.05,
+      scaleY: 0.95,
+      rotation: 32,
+      xPercent: -50,
+      yPercent: -50,
+      duration: 0.22,
+      ease: 'power1.out'
+    });
+
+    // 5. Final dive plunging off the bottom-right of the viewport into the river
+    tl.to(meNode, {
+      x: 600,
+      y: 540,
+      scale: 0.55,
+      rotation: 60,
+      opacity: 0,
+      xPercent: -50,
+      yPercent: -50,
+      duration: 0.28,
+      ease: 'power2.in'
+    });
+
+    // Fade landing view seamlessly into the river hub
+    if (viewLanding) {
+      tl.to(viewLanding, {
+        opacity: 0,
+        duration: 0.22,
+        ease: 'power2.in'
+      }, '-=0.20');
+    }
+  }
+
   function goToLanding() {
     state.view = 'landing';
     killAllChapterDemos();
@@ -654,27 +872,15 @@
       viewLanding.style.pointerEvents = 'auto';
       viewLanding.style.opacity = '1';
 
-      if (typeof gsap !== 'undefined') {
-        const landingTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-        const title = viewLanding.querySelector('.landing-title');
-        const instruction = viewLanding.querySelector('.landing-instruction');
-        const nodes = viewLanding.querySelectorAll('.perspective-node');
-        const meNode = viewLanding.querySelector('.node-center-me');
-        const bottomRow = viewLanding.querySelector('.landing-bottom-row');
+      // Mount demo cursor DOM element immediately for tests, initially hidden
+      mountDemoCursor(
+        document.getElementById('landingNodeStage'),
+        "landingDemoCursor",
+        "landingDemoCursorText",
+        "Drag the perspectives you agree with closer to you"
+      );
 
-        if (title) landingTl.fromTo(title, { y: -14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35 }, 0);
-        if (instruction) landingTl.fromTo(instruction, { y: -6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35 }, 0.08);
-        if (meNode) landingTl.fromTo(meNode, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.5)' }, 0.12);
-        if (nodes.length > 0) {
-          landingTl.fromTo(nodes, { scale: 0.85 }, { scale: 1, stagger: 0.04, duration: 0.35, ease: 'back.out(1.2)' }, 0.16);
-        }
-        if (bottomRow) landingTl.fromTo(bottomRow, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35 }, 0.25);
-      }
-
-      // Trigger educational onboarding demo animation
-      if (typeof window.__playOnboardingAnimation === 'function') {
-        window.__playOnboardingAnimation();
-      }
+      animateLandingBirdsEyeEntrance();
     }
     updateHUD();
   }
@@ -682,6 +888,7 @@
   function goToHub() {
     state.view = 'hub';
     killAllChapterDemos();
+    killLandingBirdsEyeEntrance();
     if (typeof window.__killOnboardingAnimation === 'function') window.__killOnboardingAnimation();
     if (typeof window.__stopPremortemPlayback === 'function') window.__stopPremortemPlayback();
     Object.values(spokeViews).forEach(v => {
@@ -978,7 +1185,11 @@
     }
 
     if (btnLandingEnter) {
-      btnLandingEnter.addEventListener("click", goToHub);
+      btnLandingEnter.addEventListener("click", () => {
+        animateMeBounceAndExit(() => {
+          goToHub();
+        });
+      });
     }
 
     if (btnHubLanding) {
@@ -1026,7 +1237,9 @@
         if (state.view === 'intro') {
           goToLanding();
         } else if (state.view === 'landing') {
-          goToHub();
+          animateMeBounceAndExit(() => {
+            goToHub();
+          });
         }
         break;
       case '1':
@@ -2668,6 +2881,16 @@
     function renderQuestion(idx) {
       if (!quizQuestions[idx]) return;
       const data = quizQuestions[idx];
+
+      if (resultsContainer && resultsContainer.classList.contains("active")) {
+        resultsContainer.classList.remove("active");
+        resultsContainer.style.display = "none";
+        if (questionBox) questionBox.style.display = "block";
+        const pWrap = quizShell.querySelector(".quiz-progress-bar-wrap");
+        if (pWrap) pWrap.style.display = "flex";
+      }
+      updateHUD();
+
       if (stepLabel) stepLabel.textContent = "QUESTION " + (idx + 1) + " OF " + quizQuestions.length;
       if (qTitle) qTitle.textContent = data.q;
 
@@ -2702,7 +2925,12 @@
         btnNext.classList.remove("ready");
         const nextSpan = btnNext.querySelector("span:first-child");
         if (nextSpan) {
-          nextSpan.textContent = idx === quizQuestions.length - 1 ? "Reveal Official Data" : "Next Question";
+          nextSpan.textContent = idx === quizQuestions.length - 1 ? "Reveal" : "Next Question";
+        }
+        if (idx === quizQuestions.length - 1) {
+          btnNext.classList.add("is-reveal");
+        } else {
+          btnNext.classList.remove("is-reveal");
         }
       }
     }
@@ -2889,6 +3117,7 @@
         resultsContainer.style.display = "block";
         resultsContainer.classList.add("active");
       }
+      updateHUD();
 
       initPriorityItems();
       renderPriorityCards();
@@ -3713,7 +3942,10 @@
   let playgroundDemoChangedPreset = false;
   let playgroundDemoCleanupListeners = null;
 
-  function killPlaygroundDemo(restoreIfPreview = true) {
+  let isPlaygroundIntroActive = false;
+  let playgroundIntroCleanupListener = null;
+
+  function killPlaygroundDemo(restoreIfPreview = true, preserveInteractBlur = false) {
     if (playgroundDemoTl) {
       playgroundDemoTl.kill();
       playgroundDemoTl = null;
@@ -3726,6 +3958,19 @@
     if (slideInner) slideInner.classList.remove("is-tutorial-blurred");
     const introTooltip = document.getElementById("playgroundIntroTooltip");
     if (introTooltip) introTooltip.remove();
+
+    const configurePanel = document.getElementById("playgroundConfigurePanel");
+    const interactPanel = document.getElementById("playgroundInteractPanel");
+    const overlayConfigure = document.getElementById("pgIntroOverlayConfigure");
+    const overlayInteract = document.getElementById("pgIntroOverlayInteract");
+
+    if (configurePanel) configurePanel.classList.remove("is-intro-blurred");
+    if (overlayConfigure) overlayConfigure.classList.add("is-hidden");
+
+    if (!preserveInteractBlur) {
+      if (interactPanel) interactPanel.classList.remove("is-intro-blurred");
+      if (overlayInteract) overlayInteract.classList.add("is-hidden");
+    }
 
     const layout = document.getElementById("playgroundLayout") || document.querySelector(".playground-layout");
     if (layout) {
@@ -3744,8 +3989,77 @@
     if (cursor) cursor.remove();
   }
 
-  function demonstratePlaygroundWidget() {
-    killPlaygroundDemo(true);
+  function setupPlaygroundIntro(force = false) {
+    if (hasInteractedWithPlayground && !force) return;
+
+    killPlaygroundDemo(true, false);
+
+    const configurePanel = document.getElementById("playgroundConfigurePanel");
+    const interactPanel = document.getElementById("playgroundInteractPanel");
+    const overlayConfigure = document.getElementById("pgIntroOverlayConfigure");
+    const overlayInteract = document.getElementById("pgIntroOverlayInteract");
+    const slidePanel = document.getElementById("playgroundSlidePanel");
+
+    if (!configurePanel || !interactPanel || !overlayConfigure || !overlayInteract || !slidePanel) return;
+
+    // 1. On page load, blur out the two 'step 1' and step 2 containers
+    configurePanel.classList.add("is-intro-blurred");
+    interactPanel.classList.add("is-intro-blurred");
+
+    // 2. Over step 1 have 'Build a chatbot', over step 2 have 'Chat with it'
+    overlayConfigure.classList.remove("is-hidden");
+    overlayInteract.classList.remove("is-hidden");
+
+    isPlaygroundIntroActive = true;
+
+    if (playgroundIntroCleanupListener) {
+      playgroundIntroCleanupListener();
+      playgroundIntroCleanupListener = null;
+    }
+
+    const onIntroAnyClick = (e) => {
+      if (!isPlaygroundIntroActive) return;
+      isPlaygroundIntroActive = false;
+
+      if (playgroundIntroCleanupListener) {
+        playgroundIntroCleanupListener();
+        playgroundIntroCleanupListener = null;
+      }
+
+      if (e && typeof e.stopPropagation === "function") {
+        e.stopPropagation();
+      }
+
+      // 3. Unblur step 1 (left side) and fade out left overlay
+      configurePanel.classList.remove("is-intro-blurred");
+      overlayConfigure.classList.add("is-hidden");
+
+      // 4. KEEP RIGHT SIDE BLURRED!
+      interactPanel.classList.add("is-intro-blurred");
+      overlayInteract.classList.remove("is-hidden");
+
+      // 5. Trigger demo animation where it reveals as it goes
+      setTimeout(() => {
+        demonstratePlaygroundWidget(true);
+      }, 50);
+    };
+
+    slidePanel.addEventListener("click", onIntroAnyClick, { capture: true, once: true });
+    const onKeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        onIntroAnyClick(e);
+      }
+    };
+    slidePanel.addEventListener("keydown", onKeydown, { capture: true, once: true });
+
+    playgroundIntroCleanupListener = () => {
+      slidePanel.removeEventListener("click", onIntroAnyClick, { capture: true });
+      slidePanel.removeEventListener("keydown", onKeydown, { capture: true });
+    };
+  }
+
+  function demonstratePlaygroundWidget(keepInteractBlurred = false) {
+    killPlaygroundDemo(true, keepInteractBlurred);
     if (hasInteractedWithPlayground) return;
     if (typeof gsap === "undefined") return;
     const slidePanel = document.getElementById("playgroundSlidePanel");
@@ -3754,6 +4068,23 @@
 
     const layout = document.getElementById("playgroundLayout") || document.querySelector(".playground-layout");
     if (!layout) return;
+
+    const configurePanel = document.getElementById("playgroundConfigurePanel");
+    const interactPanel = document.getElementById("playgroundInteractPanel");
+    const overlayConfigure = document.getElementById("pgIntroOverlayConfigure");
+    const overlayInteract = document.getElementById("pgIntroOverlayInteract");
+
+    // Ensure left side is unblurred and left overlay hidden
+    if (configurePanel) configurePanel.classList.remove("is-intro-blurred");
+    if (overlayConfigure) overlayConfigure.classList.add("is-hidden");
+
+    if (keepInteractBlurred) {
+      if (interactPanel) interactPanel.classList.add("is-intro-blurred");
+      if (overlayInteract) overlayInteract.classList.remove("is-hidden");
+    } else {
+      if (interactPanel) interactPanel.classList.remove("is-intro-blurred");
+      if (overlayInteract) overlayInteract.classList.add("is-hidden");
+    }
 
     const quizmasterPill = layout.querySelector('.pg-preset-pill[data-preset="quizmaster"]');
     const freestylePill = layout.querySelector('.pg-preset-pill[data-preset="freestyle"]');
@@ -3771,7 +4102,7 @@
     const onUserInteraction = () => {
       if (isDemoUpdatingPlayground) return;
       hasInteractedWithPlayground = true;
-      killPlaygroundDemo(false);
+      killPlaygroundDemo(false, false);
     };
     const evts = ["pointerdown", "click", "input", "change", "keydown"];
     evts.forEach(ev => slidePanel.addEventListener(ev, onUserInteraction, { capture: true }));
@@ -3897,13 +4228,18 @@
     });
     playgroundDemoTl.to({}, { duration: 1.98 });
 
-    // Right Column: Interact & Test Live
+    // Right Column: Interact & Test Live (Unblurs & reveals Step 2)
     playgroundDemoTl.to(cursor, {
       x: () => getDemoRelativePoint(layout, chatInput, 0, -28).x,
       y: () => getDemoRelativePoint(layout, chatInput, 0, -28).y,
       duration: 1.68,
       ease: "sine.inOut",
       onStart: () => {
+        const ip = document.getElementById("playgroundInteractPanel");
+        const oi = document.getElementById("pgIntroOverlayInteract");
+        if (ip) ip.classList.remove("is-intro-blurred");
+        if (oi) oi.classList.add("is-hidden");
+
         setPlaygroundSpotlight(chatCol);
         if (cursorText) cursorText.textContent = "Step 2: Chat here to test your bot live";
       }
@@ -4383,7 +4719,7 @@
         demonstrateQuizWidget();
       }
     } else if (spokeNum === 1 && slideIdx === 1) {
-      demonstratePlaygroundWidget();
+      setupPlaygroundIntro();
     } else if (spokeNum === 1 && slideIdx === 2) {
       demonstrateSpectrumWidget();
     } else if (spokeNum === 3 && slideIdx === 0) {
@@ -4988,7 +5324,7 @@
       const stepText = `STONE ${idx + 1} OF ${RIVER_DECKS.length}`;
       const titleText = (status === 'locked') ? 'Locked Stepping Stone' : deck.title;
       const descText = (status === 'locked')
-        ? `${deck.desc} Complete the previous stepping stone to unlock.`
+        ? `${deck.desc.trim().replace(/\.?$/, '.')} Complete the previous stepping stone to unlock.`
         : deck.desc;
 
       // Update static fallback tooltip
@@ -5830,6 +6166,7 @@
         compass: state.userCompassData || null,
         priorities: state.userPriorityData || null
       }),
+      setupPlaygroundIntro,
       demonstratePlaygroundWidget,
       killPlaygroundDemo,
       demonstrateSpectrumWidget,
