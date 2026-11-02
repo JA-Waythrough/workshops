@@ -731,6 +731,10 @@
     if (isExitingLanding) return;
     isExitingLanding = true;
 
+    try {
+      if (typeof logCompassSubmission === 'function') logCompassSubmission();
+    } catch (_) {}
+
     const meNode = document.getElementById('nodeCenterMe');
     const btnEnter = document.getElementById('btnLandingEnter');
     if (btnEnter) {
@@ -886,6 +890,15 @@
   }
 
   function goToHub() {
+    if (state.view === 'spoke' && state.spoke === 1 && state.slide === 0) {
+      const resultsContainer = document.getElementById("quizResultsContainer");
+      if (resultsContainer && resultsContainer.classList.contains("active")) {
+        if (typeof window.__updatePriorityData === "function") window.__updatePriorityData();
+        try {
+          if (typeof logPrioritiesSubmission === "function") logPrioritiesSubmission();
+        } catch (_) {}
+      }
+    }
     state.view = 'hub';
     killAllChapterDemos();
     killLandingBirdsEyeEntrance();
@@ -1172,6 +1185,90 @@
     });
 
     window.__introResetPosition = resetPosition;
+  }
+
+  // --- Google Sheets Logging Integration ---
+  const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyil0aUXtTrowAhf6iuZheUJ4t0eXQ4id_O7nyveQu3GWEs5VgJZ4cnPPWetOrjth2C/exec";
+
+  function getParticipantIdentifier() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlName = urlParams.get("name") || urlParams.get("user") || urlParams.get("p");
+      if (urlName && urlName.trim()) {
+        localStorage.setItem("waythrough_participant_name", urlName.trim());
+        return urlName.trim();
+      }
+      const storedName = localStorage.getItem("waythrough_participant_name");
+      if (storedName && storedName.trim()) return storedName.trim();
+
+      let anonId = localStorage.getItem("waythrough_anon_id");
+      if (!anonId) {
+        anonId = "Member " + Math.random().toString(36).substring(2, 6).toUpperCase();
+        localStorage.setItem("waythrough_anon_id", anonId);
+      }
+      return anonId;
+    } catch (_) {
+      return "Anonymous Member";
+    }
+  }
+
+  function sendToGoogleSheet(payload) {
+    if (!GOOGLE_SHEET_WEBHOOK_URL) return;
+    try {
+      fetch(GOOGLE_SHEET_WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).catch(err => {
+        console.warn("[Google Sheets Logger]", err);
+      });
+    } catch (e) {
+      console.warn("[Google Sheets Logger]", e);
+    }
+  }
+
+  let lastCompassSentTitle = "";
+  function logCompassSubmission() {
+    const compass = state.userCompassData || null;
+    if (!compass || !compass.title) return;
+    if (compass.title === lastCompassSentTitle) return;
+    lastCompassSentTitle = compass.title;
+
+    const participant = getParticipantIdentifier();
+    sendToGoogleSheet({
+      participant: participant,
+      type: "Compass Onboarding",
+      archetype: compass.title,
+      ranks: [],
+      compass: compass,
+      compassSummary: `${compass.title} (${compass.badge || ''})`
+    });
+  }
+
+  let lastPrioritiesSentHash = "";
+  function logPrioritiesSubmission() {
+    const compass = state.userCompassData || null;
+    const priorities = state.userPriorityData || [];
+    if (!priorities || priorities.length === 0) return;
+
+    const ranks = priorities.map((p, idx) => {
+      return `${idx + 1}. ${p.question || p.id || ''}`;
+    });
+    const hash = JSON.stringify(ranks);
+    if (hash === lastPrioritiesSentHash) return;
+    lastPrioritiesSentHash = hash;
+
+    const participant = getParticipantIdentifier();
+    sendToGoogleSheet({
+      participant: participant,
+      type: "Priority Ranking & Final",
+      archetype: compass ? compass.title : "",
+      ranks: ranks,
+      compass: compass,
+      compassSummary: compass ? `${compass.title} (${compass.badge || ''})` : "",
+      priorities: priorities
+    });
   }
 
   // --- Setup Navigation Click Handlers ---
@@ -2998,6 +3095,7 @@
         localStorage.setItem("waythrough_priority_rankings", JSON.stringify(priorityData));
       } catch (_) {}
     }
+    window.__updatePriorityData = updatePriorityData;
 
     let draggedIndex = null;
 
@@ -3128,6 +3226,9 @@
         btnConfirm.onclick = () => {
           killPriorityDemo();
           updatePriorityData();
+          try {
+            if (typeof logPrioritiesSubmission === "function") logPrioritiesSubmission();
+          } catch (_) {}
           markDeckViewed(1);
           goToHub();
         };
@@ -6189,6 +6290,9 @@
           transform: comp ? comp.style.transform : ''
         };
       },
+      logCompassSubmission,
+      logPrioritiesSubmission,
+      getParticipantIdentifier,
       getState: () => ({ ...state })
     };
     window.__presentationLoaded = true;
