@@ -1229,20 +1229,23 @@
   }
 
   let lastCompassSentTitle = "";
+  let lastCompassSentRank = "";
   function logCompassSubmission() {
     const compass = state.userCompassData || null;
     if (!compass || !compass.title) return;
-    if (compass.title === lastCompassSentTitle) return;
+    const topStr = JSON.stringify(compass.topPerspectives || []);
+    if (compass.title === lastCompassSentTitle && topStr === lastCompassSentRank) return;
     lastCompassSentTitle = compass.title;
+    lastCompassSentRank = topStr;
 
     const participant = getParticipantIdentifier();
     sendToGoogleSheet({
       participant: participant,
       type: "Compass Onboarding",
       archetype: compass.title,
-      ranks: [],
+      ranks: compass.topPerspectives || [],
       compass: compass,
-      compassSummary: `${compass.title} (${compass.badge || ''})`
+      compassSummary: `${compass.title} [Strongest: ${compass.strongestPerspective || ''}, 2nd: ${compass.secondPerspective || ''}]`
     });
   }
 
@@ -1266,7 +1269,7 @@
       archetype: compass ? compass.title : "",
       ranks: ranks,
       compass: compass,
-      compassSummary: compass ? `${compass.title} (${compass.badge || ''})` : "",
+      compassSummary: compass ? `${compass.title} [Strongest: ${compass.strongestPerspective || ''}, 2nd: ${compass.secondPerspective || ''}]` : "",
       priorities: priorities
     });
   }
@@ -3067,6 +3070,7 @@
           }
         });
       }
+      updatePriorityData();
     }
 
     function updatePriorityData() {
@@ -5032,12 +5036,21 @@
       }
       if (bodyEl) bodyEl.textContent = matchedArchetype.body;
 
+      const topPerspectives = list.map((item, idx) => {
+        return `${idx + 1}. ${item.name} (${Math.round(item.norm * 100)}%)`;
+      });
+      const strongestPerspective = list[0] ? `${list[0].name} (${Math.round(list[0].norm * 100)}%)` : "";
+      const secondPerspective = list[1] ? `${list[1].name} (${Math.round(list[1].norm * 100)}%)` : "";
+
       state.userCompassData = {
         title: matchedArchetype.title,
         badge: matchedArchetype.badge,
         icon: matchedArchetype.icon || 'compass',
         body: matchedArchetype.body,
         perspectiveScores: { ...scores },
+        topPerspectives: topPerspectives,
+        strongestPerspective: strongestPerspective,
+        secondPerspective: secondPerspective,
         timestamp: new Date().toISOString()
       };
       try {
@@ -5386,9 +5399,13 @@
       });
     }
 
+    // Initialize compass archetype data on load
+    updateCombinedPersona();
+
     // Expose node position and demo animation APIs
     window.__setNodePosition = setNodePosition;
     window.__setNodeRadius = setNodeRadius;
+    window.__updateCombinedPersona = updateCombinedPersona;
     window.__playOnboardingAnimation = playOnboardingAnimation;
     window.__killOnboardingAnimation = killOnboardingAnimation;
   }
