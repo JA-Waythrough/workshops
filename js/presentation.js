@@ -3238,9 +3238,7 @@
         };
       }
 
-      setTimeout(() => {
-        demonstratePriorityRanking();
-      }, 750);
+      setupPriorityRevealIntro();
     }
 
     function revealAnswers() {
@@ -3279,6 +3277,8 @@
     window.__getPriorityItems = () => priorityItems;
     window.__triggerShrugHorizontalWipe = triggerShrugHorizontalWipe;
     window.__triggerAutumnShrugTumble = triggerShrugHorizontalWipe;
+    window.__killPriorityDemo = killPriorityDemo;
+    window.__unblurPriorityStage = unblurPriorityStage;
   }
 
   // --- Section: Playground of Possibilities Engine (Job 5) ---
@@ -3949,12 +3949,91 @@
     });
   }
 
-  // 1B. Stone 2 ("Where are we now?" — Priority Ranking) Demo
+  // 1B. Stone 2 ("Where are we now?" — Priority Ranking) Demo & Guided Reading Blur
   let priorityDemoTl = null;
   let hasInteractedWithPriority = false;
   let priorityDemoCleanupListeners = null;
+  let priorityBlurTimer = null;
+  let priorityDemoStartTimer = null;
+  let priorityBlurCleanupListeners = null;
+  let isPriorityStageBlurred = false;
+
+  function unblurPriorityStage(triggerDemo = true) {
+    if (priorityBlurTimer) {
+      clearTimeout(priorityBlurTimer);
+      priorityBlurTimer = null;
+    }
+    if (priorityBlurCleanupListeners) {
+      priorityBlurCleanupListeners();
+      priorityBlurCleanupListeners = null;
+    }
+    const stage = document.getElementById('priorityRankingStage');
+    const footer = document.querySelector('.priority-footer-row');
+    if (stage) stage.classList.remove('is-stage-blurred');
+    if (footer) footer.classList.remove('is-stage-blurred');
+    isPriorityStageBlurred = false;
+
+    if (triggerDemo && !hasInteractedWithPriority) {
+      if (priorityDemoStartTimer) clearTimeout(priorityDemoStartTimer);
+      // Wait a fraction of a second for the smooth unblur transition before playing demo
+      priorityDemoStartTimer = setTimeout(() => {
+        priorityDemoStartTimer = null;
+        demonstratePriorityRanking();
+      }, 500);
+    }
+  }
+
+  function setupPriorityRevealIntro() {
+    killPriorityDemo();
+
+    const stage = document.getElementById('priorityRankingStage');
+    const footer = document.querySelector('.priority-footer-row');
+    const resultsContainer = document.getElementById('quizResultsContainer');
+    if (!stage || !resultsContainer) return;
+
+    stage.classList.add('is-stage-blurred');
+    if (footer) footer.classList.add('is-stage-blurred');
+    isPriorityStageBlurred = true;
+
+    // Early interaction: click, tap, or key press anywhere unblurs immediately
+    const onEarlyAction = () => {
+      if (!isPriorityStageBlurred) return;
+      unblurPriorityStage(true);
+    };
+
+    const evts = ['pointerdown', 'click', 'keydown'];
+    evts.forEach(ev => resultsContainer.addEventListener(ev, onEarlyAction, { capture: true, once: true }));
+    priorityBlurCleanupListeners = () => {
+      evts.forEach(ev => resultsContainer.removeEventListener(ev, onEarlyAction, { capture: true }));
+    };
+
+    // Keep everything below banner blurred for 2 seconds (guided reading time for "guesses is all we have"),
+    // then smoothly reveal the rest and trigger the demo animation
+    priorityBlurTimer = setTimeout(() => {
+      priorityBlurTimer = null;
+      unblurPriorityStage(true);
+    }, 2000);
+  }
 
   function killPriorityDemo() {
+    if (priorityBlurTimer) {
+      clearTimeout(priorityBlurTimer);
+      priorityBlurTimer = null;
+    }
+    if (priorityDemoStartTimer) {
+      clearTimeout(priorityDemoStartTimer);
+      priorityDemoStartTimer = null;
+    }
+    if (priorityBlurCleanupListeners) {
+      priorityBlurCleanupListeners();
+      priorityBlurCleanupListeners = null;
+    }
+    const stage = document.getElementById('priorityRankingStage');
+    const footer = document.querySelector('.priority-footer-row');
+    if (stage) stage.classList.remove('is-stage-blurred');
+    if (footer) footer.classList.remove('is-stage-blurred');
+    isPriorityStageBlurred = false;
+
     if (priorityDemoTl) {
       priorityDemoTl.kill();
       priorityDemoTl = null;
@@ -3972,11 +4051,16 @@
   }
 
   function demonstratePriorityRanking() {
+    const stage = document.getElementById('priorityRankingStage');
+    const footer = document.querySelector('.priority-footer-row');
+    if (stage) stage.classList.remove('is-stage-blurred');
+    if (footer) footer.classList.remove('is-stage-blurred');
+    isPriorityStageBlurred = false;
+
     killPriorityDemo();
     if (hasInteractedWithPriority) return;
     if (typeof gsap === 'undefined') return;
 
-    const stage = document.getElementById('priorityRankingStage');
     const cards = Array.from(document.querySelectorAll('#priorityCardsList .priority-card'));
     if (!stage || cards.length < 4) return;
 
@@ -3996,7 +4080,7 @@
     gsap.set(cursor, { x: pStart.x, y: pStart.y, opacity: 0 });
 
     priorityDemoTl = gsap.timeline({
-      delay: 0.75,
+      delay: 0.25,
       onComplete: () => killPriorityDemo()
     });
 
@@ -6278,6 +6362,8 @@
       killQuizDemo,
       demonstratePriorityRanking,
       killPriorityDemo,
+      setupPriorityRevealIntro,
+      unblurPriorityStage,
       reorderPriorityItem: (from, to) => { if (typeof window.__reorderPriorityItem === 'function') window.__reorderPriorityItem(from, to); },
       getPriorityItems: () => { if (typeof window.__getPriorityItems === 'function') return window.__getPriorityItems(); return []; },
       getUserScores: () => ({
